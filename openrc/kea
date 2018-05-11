@@ -1,0 +1,110 @@
+#!/sbin/openrc-run
+# Copyright 1999-2017 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+# Adapted by Flavinux 
+
+description="kea dhcp services"
+
+dhcp4_command="/usr/sbin/kea-dhcp4"
+dhcp6_command="/usr/sbin/kea-dhcp6"
+ddns_command="/usr/sbin/kea-dhcp-ddns"
+ctrl_agent_command="/usr/sbin/kea-ctrl-agent"
+config_file="/etc/kea/kea.conf"
+config_file_dhcp4="/etc/kea/kea-dhcp4.conf"
+config_file_dhcp6="/etc/kea/kea-dhcp6.conf"
+config_file_ddns="/etc/kea/kea-dhcp-ddns.conf"
+config_file_ctrl_agent="/etc/kea/kea-ctrl-agent.conf"
+
+dhcp4_pidfile="/var/lib/kea/kea-dhcp4.kea-dhcp4.pid"
+dhcp6_pidfile="/var/lib/kea/kea-dhcp6.kea-dhcp6.pid"
+ddns_pidfile="/var/lib/kea/kea-dhcp-ddns.kea-dhcp-ddns.pid"
+ctrl_agent_pidfile="/var/lib/kea/kea-ctrl-agent.kea-ctrl-agent.pid"
+
+depend() {
+	use net
+}
+
+start_pre() {
+#	if [ ! -f "${config_file}" ] ; then
+#		eerror "Please create a ${config_file} config file."
+#		return 1
+#	fi
+
+	if ${DHCP4:-false} ; then
+		if ! ${dhcp4_command} -t ${config_file_dhcp4} 1>/dev/null 2>/dev/null ; then
+			eerror "Error in config file.(dhcp4)"
+			return 1
+		fi
+	fi
+	if ${DHCP6:-false} ; then
+		if ! ${dhcp6_command} -t ${config_file_dhcp6} 1>/dev/null 2>/dev/null ; then
+			eerror "Error in config file.(dhcp6)"
+			return 1
+		fi
+	fi
+	if ${DDNS:-false} ; then
+		if ! ${ddns_command} -t ${config_file_ddns} 1>/dev/null 2>/dev/null ; then
+			eerror "Error in config file.(ddns)"
+			return 1
+		fi
+	fi
+	if ${CTRLAGENT:-false} ; then
+		if ! ${ctrl_agent_command} -t ${config_file_ctrl_agent} 1>/dev/null 2>/dev/null ; then
+			eerror "Error in config file.(ctrl_agent)"
+			return 1
+		fi
+	fi
+
+}
+
+start() {
+	einfo "Starting kea dhcp services"
+	if ${DHCP4:-false} ; then
+		ebegin " Starting kea-dhcp4"
+		start-stop-daemon --start -b -p ${dhcp4_pidfile} \
+			-x ${dhcp4_command} -- -c ${config_file_dhcp4}
+		eend $?
+	fi
+	if ${DHCP6:-false} ; then
+		ebegin " Starting kea-dhcp6"
+		start-stop-daemon --start -b -p ${dhcp6_pidfile} \
+			-x ${dhcp6_command} -- -c ${config_file_dhcp6} 
+		eend $?
+	fi
+	if ${DDNS:-false} ; then
+		ebegin " Starting kea-ddns"
+		start-stop-daemon --start -b -p ${ddns_pidfile} \
+			-x ${ddns_command} -- -c ${config_file_ddns} 
+		eend $?
+	fi
+	if ${CTRLAGENT:-false} ; then
+		ebegin " Starting ctrl-agent"
+		start-stop-daemon --start -b -p ${ctrl_agent_pidfile} \
+			-x ${ctrl_agent_command} -- -c ${config_file_ctrl_agent}
+		eend $?
+	fi
+}
+
+stop() {
+	einfo "Stopping kea dhcp services"
+	if ${DHCP4:-false} ; then
+		ebegin " Stoping kea-dhcp4"
+		start-stop-daemon --stop -p ${dhcp4_pidfile} 
+		eend $?
+	fi
+	if ${DHCP6:-false} ; then
+		ebegin " Stoping kea-dhcp6"
+		start-stop-daemon --stop -p ${dhcp6_pidfile}
+		eend $?
+	fi
+	if ${DDNS:-false} ; then
+		ebegin " Stoping kea-ddns"
+		start-stop-daemon --stop -p ${ddns_pidfile} 
+		eend $?
+	fi
+	if ${CTRLAGENT:-false} ; then
+		ebegin " Stoping ctrl-agent"
+		start-stop-daemon --stop -p ${ctrl_agent_pidfile}
+		eend $?
+	fi
+}
